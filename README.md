@@ -26,11 +26,11 @@
 
 ## 快速开始
 
-### 从 GitHub 安装（repo 创建后）
+### 从 GitHub 安装
 
 ```sh
-# 把本仓库作为 bundle 装进 web profile（替换 <owner>/<repo>）
-dsh plugin --profile web add "github:<owner>/<repo>"
+# 把本仓库作为 bundle 装进 web profile
+dsh plugin --profile web add "github:makoto1995/dsh-lark-enterprise"
 
 # 首次启动：打印二维码 → 扫码确认绑定已有应用（或创建新应用）
 dsh web

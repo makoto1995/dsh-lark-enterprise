@@ -26,11 +26,11 @@ English | [简体中文](README.md)
 
 ## Quick start
 
-### Install from GitHub (once the repo exists)
+### Install from GitHub
 
 ```sh
-# Install this repo as a bundle into the web profile (replace <owner>/<repo>)
-dsh plugin --profile web add "github:<owner>/<repo>"
+# Install this repo as a bundle into the web profile
+dsh plugin --profile web add "github:makoto1995/dsh-lark-enterprise"
 
 # First boot prints a QR: scan to confirm binding an existing app (or create one)
 dsh web
