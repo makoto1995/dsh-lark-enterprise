@@ -1,172 +1,119 @@
-# dsh-lark · DeepSeek Harness plugin for Feishu / Lark
+# dsh-lark-enterprise · DeepSeek Harness Feishu/Lark channel plugin (Enterprise fork)
 
-[![npm](https://img.shields.io/npm/v/dsh-lark-channel)](https://www.npmjs.com/package/dsh-lark-channel) [![CI](https://github.com/omdsh-dev/dsh-lark/actions/workflows/ci.yml/badge.svg)](https://github.com/omdsh-dev/dsh-lark/actions/workflows/ci.yml) [![license](https://img.shields.io/badge/license-BSD--3--Clause-blue)](LICENSE)
+[![license](https://img.shields.io/badge/license-BSD--3--Clause-blue)](LICENSE)
+[![upstream](https://img.shields.io/badge/upstream-dsh--lark--channel-4D6BFE)](https://github.com/omdsh-dev/dsh-lark)
 
 English | [简体中文](README.md)
 
-**Put the DeepSeek Harness (DSH) you already run into Feishu/Lark.**
+**Enterprise fork of dsh-lark-channel**: bridge DeepSeek Harness (DSH) into Feishu/Lark — chat-driven agents, card approvals, cot output, multi-workspace, multi-agent — plus **document sharing** and **zero-config credential onboarding** for single-bot company deployments.
 
-Hand your agent work from the chat, watch it run, switch workspace and model as you go. Questions, plan reviews, and tool approvals come back to the same conversation, so nothing sends you to a terminal. When it helps, put several agents in one group and let them work together.
+---
 
-## Quickstart
+## Key differences from upstream
 
-```sh
-npm i -g dsh-lark-channel
-dsh-lark-channel start
-```
+| Aspect | Upstream dsh-lark-channel | This fork (dsh-lark-enterprise) |
+|---|---|---|
+| **Document sharing** | ❌ | ✅ **`feishu_share_document`**: share `full_access` of bot-created docs/tables/folders to the current chat counterpart (DM user or group); target resolved from the channel session id automatically; direct Feishu OpenAPI authorization |
+| **Deployment config** | Requires `appId` (or QR-create a new app) | ✅ **Zero app config**: no app identifiers/credentials in templates; on first boot the bound app id is reused from the local lark-cli config (`~/.lark-cli/config.json`) |
+| **Credential onboarding** | QR create/re-authorize, secret persisted | ✅ Same flow + **lark-cli binding reuse**: bound app → QR just confirms authorization; secret always stored in the DSH credentials seam (`LARK_APP_SECRET`), settings keep only the reference; **later boots reuse local state with no prompt** |
+| **Portability** | Config carries app identifiers | ✅ Templates carry zero deployment-specific values; credentials via credentials seam/env; consistent across Windows/macOS/Linux |
+| Messaging channel | @larksuite/channel SDK long connection | Same (unchanged) |
+| Cards / approvals / cot / workspaces / multi-agent / service mgmt | ✅ | ✅ All kept (unchanged) |
 
-A QR code appears in the terminal. Scan it in Feishu to create the app, then DM the bot or @-mention it in a group.
+**In one line**: this fork only adds — `feishu_share_document` (document sharing) and `readLarkCliAppId` (lark-cli binding reuse); everything else matches upstream and can follow upstream updates smoothly.
 
-Prefer to install nothing? Run it through npx instead — every later command then carries the same prefix:
+---
 
-```sh
-npx dsh-lark-channel@latest start
-```
+## Quick start
 
-If DeepSeek Harness itself is not installed yet:
-
-```sh
-npm i -g @deepseek-ai/dsh
-```
-
-No public server, no callback URL.
-
-## Why bother
-
-- **Nothing to sit and watch.** Start the work from Feishu and check on it whenever.
-- **More than a chatbot.** It switches real workspaces and models, and runs the commands and tools your Harness already has.
-- **The decisions stay yours.** Model questions, plan reviews, and tool approvals land in the chat; a button or a sentence answers them.
-- **Contexts stay apart.** Each chat, topic, and workspace keeps its own session.
-- **Agents can work together.** One command adds another bot; in a group they hand the turn over by @-mentioning each other, with a hop limit that stops an endless exchange.
-
-## A first run
-
-Look around:
-
-```text
-/status
-/ws
-/cd my-project
-/model
-```
-
-Then give it something to do:
-
-```text
-Find out why this project fails to build. Plan it first, and check with me before changing anything.
-```
-
-The work shows up in Feishu as it happens, and anything needing you arrives as a question, a plan, or an approval card. This channel's own wording renders in each reader's Feishu language.
-
-## What it does
-
-| Capability | What you get |
-|---|---|
-| Durable sessions | Survive a restart; the next message continues where you were, and `/new` starts over in place |
-| Workspaces | `/ws` lists, `/cd` switches; returning to one resumes the work you left there |
-| Model switching | `/model` opens a picker; the session and its context carry over, and the default is one press away |
-| Native run view | Reasoning, tool calls, and results as a thinking process, with the answer sent on its own |
-| Cards that ask | Single or multiple choice, or type an answer; approve a plan or send feedback; allow or refuse a tool call |
-| Live status | `/status` shows workspace, model, and session — plus context occupancy and token totals where the host meters them — and refreshes in place |
-| Session scope | One agent per chat, per topic thread, or per person in a shared chat |
-| Several agents | Each bot keeps its own settings, credential, and sessions, and two of them can talk in one group |
-| Slash commands | Host commands (`/plan`, `/compact`, `/permission`, …) run straight through the DSH command runtime |
-
-## Commands
-
-| Command | What it does |
-|---|---|
-| `/status` | Show and refresh workspace, model, and session; context and tokens where available |
-| `/ws` | List the workspaces this channel can reach |
-| `/cd <name or path>` | Switch this conversation's workspace |
-| `/model` | Open the model picker |
-| `/model use <provider/model>` | Switch without opening a card |
-| `/model reset` | Back to the deployment default |
-| `/new` | Start a fresh session in place; workspace and model stay |
-| `/stop` | Stop the running task |
-| `/help` | Everything this chat accepts, host commands included |
-
-## Running it
-
-On macOS and systemd Linux the bot runs as a user service, so closing the terminal leaves it up:
+### Install from GitHub (once the repo exists)
 
 ```sh
-dsh-lark-channel status
-dsh-lark-channel logs -f
-dsh-lark-channel restart
-dsh-lark-channel stop
-```
+# Install this repo as a bundle into the web profile (replace <owner>/<repo>)
+dsh plugin --profile web add "github:<owner>/<repo>"
 
-Started through npx, those same commands carry the `npx dsh-lark-channel@latest` prefix — the tool prints whichever form you are using, so what you read is what you can paste.
-
-To upgrade:
-
-```sh
-dsh-lark-channel upgrade
-```
-
-That installs the newest CLI and restarts the bot on it. Through npx there is nothing to upgrade — `npx dsh-lark-channel@latest start` already runs the newest — and either way `start` and `status` mention a newer release when one exists.
-
-When the connection drops, the channel rebuilds its WebSocket under a quota and a backoff, so a live process is never a silently dead bot.
-
-### More agents
-
-Give a second Feishu app its own agent:
-
-```sh
-dsh-lark-channel add reviewer
-```
-
-It writes the new row, restarts, and shows that bot's QR code. Once scanned it has its own settings, app secret, and sessions — nothing shared with the first.
-
-Put both in one group and they hand the turn over by mentioning each other: one finishes a change and @s the reviewer, who can @ back for another pass. Six consecutive bot turns by default, and anyone speaking refills that. To take one out:
-
-```sh
-dsh-lark-channel remove reviewer
-```
-
-Its credential and settings stay, so adding the same name back reaches the same bot.
-
-To run Feishu inside the profile `dsh web` already uses:
-
-```sh
-dsh plugin --profile web add dsh-lark-channel@latest
+# First boot prints a QR: scan to confirm binding an existing app (or create one)
 dsh web
 ```
 
-<details>
-<summary>Permissions and advanced options</summary>
+### Build and install locally
 
-- The app's visibility scope decides who can reach the bot at all; `senderAllowlist`, `groupAllowlist`, and `approvers` narrow it further.
-- `workspaceRoots` fences the directories a chat may switch into.
-- `sessionScope` is `chat`, `chat-thread`, or `chat-sender`.
-- `instance` names an extra bot row; the first stays unnamed, which keeps its settings and sessions exactly where they are.
-- `botPeers` restricts which bots are answered; `botHops` bounds consecutive bot turns (six).
-- A card that changes state is bound to the chat it was sent to: forwarded elsewhere, it governs nothing.
-- Where the deployment composes a credentials service, the scanned app secret is stored there; one written into settings by an older version moves on the next boot.
-- Image input is off by default: turn on `attachImages` only for a model you know accepts images.
-- Configuration is read at startup; changing it needs a restart.
+```sh
+git clone <your-repo-url>
+cd dsh-lark-enterprise
+pnpm install && pnpm build && pnpm pack
+dsh plugin --profile web add ./dsh-lark-enterprise-<version>.tgz
+```
 
-</details>
+> Prereqs: Node.js `^22.19.0 || >=24`, DeepSeek Harness (`npm i -g @deepseek-ai/dsh`), a Feishu/Lark tenant.
+
+### Credential flow (zero config)
+
+1. **First boot**: the plugin reuses the app bound in local lark-cli config (`~/.lark-cli/config.json`) and prints a QR;
+2. **Scan**: confirm binding the existing app (or create a new one); the secret is stored in the DSH credentials seam (`LARK_APP_SECRET`), settings keep only the reference;
+3. **Later boots**: reuse the persisted local state, no onboarding prompt.
+
+> lark-cli is optional: without it, first boot still runs the QR flow (creates a new app) and persists the secret the same way.
+
+---
+
+## Document sharing (enterprise addition)
+
+With a single company bot, documents the bot creates belong to the bot and must be explicitly shared with the chat counterpart:
+
+```text
+Create a weekly report document and share it with me
+```
+
+The agent creates the document and calls `feishu_share_document` (`token` + `type`), which grants `full_access` to the current chat counterpart:
+
+| Session scope | Grant target |
+|---|---|
+| DM (chat-sender) | the user (openid) |
+| Group (chat) | the whole group (openchat) |
+| Thread (chat-thread) | falls back to the containing chat |
+
+Config (in the `lark-channel` row of `cordis.patch.yml`):
+
+| Key | Default | Meaning |
+|---|---|---|
+| `shareEnabled` | true | provide the tool to chat agents |
+| `sharePerm` | full_access | default role (view/edit/full_access); the model may override per call |
+
+Prereq: grant the app `docs:permission.member:create` plus resource scopes (`drive:drive` / `docs:doc` / `sheets:spreadsheet` / `bitable:app`, etc.) in the Feishu developer console.
+
+---
+
+## Full capabilities (same as upstream)
+
+- **Persistent sessions**: resume after restart; `/new` restarts in place;
+- **Multi-workspace**: `/ws` list, `/cd` switch;
+- **Model switching**: `/model` picker card, remembered per chat;
+- **Native process view**: cot thinking process + final answer sent separately (use `output: 'stream'` on older clients);
+- **Human-in-the-loop cards**: questions, plan reviews, tool approvals;
+- **Session isolation**: `chat` / `chat-thread` / `chat-sender`;
+- **Multi-agent collaboration**: several bots in one group hand turns via @, bounded by `botHops`;
+- **Slash commands**: `/status` `/new` `/stop` `/help` + host command passthrough;
+- **Service management**: user-level background service on macOS/systemd (`dsh-lark-channel status/logs/restart/stop`);
+- **Self-healing**: quota-and-backoff WebSocket reconnect.
 
 ## Requirements
 
 - Node.js `^22.19.0 || >=24`
 - DeepSeek Harness `0.1.0-rc.6` or newer
-- A Feishu or Lark tenant
-
-A native thinking process needs Feishu PC 7.70 / mobile 7.74 or newer; older clients can use `output: 'stream'`.
+- Feishu or Lark tenant (native cot requires Feishu PC 7.70 / mobile 7.74+)
 
 ## Development
 
 ```sh
 pnpm install
 pnpm test
+pnpm typecheck
 pnpm build
 ```
 
 ## License
 
-[BSD-3-Clause](LICENSE)
+[BSD-3-Clause](LICENSE), retaining the upstream [dsh-lark-channel](https://github.com/omdsh-dev/dsh-lark) copyright notice.
 
-An unofficial community plugin, not affiliated with, authorized by, or endorsed by DeepSeek, Feishu, or Lark.
+This is an unofficial community plugin with no affiliation, endorsement, or backing from DeepSeek, Feishu, or Lark.

@@ -9,7 +9,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import { Config, resolveConfig } from './config.ts'
 import type { ResolvedConfig } from './config.ts'
 import { installBridge, type ChannelPort } from './bridge.ts'
-import { migrateAppSecret, resolveAppSecret, storeAppSecret } from './credentials.ts'
+import { migrateAppSecret, readLarkCliAppId, resolveAppSecret, storeAppSecret } from './credentials.ts'
 import type { HostCredentials } from './credentials.ts'
 import { instanceIdentity } from './instance.ts'
 import type { CotEvent, CotHandle } from './cot.ts'
@@ -238,6 +238,23 @@ export function apply(ctx: Context, config: Config): void {
 
     const secret = await resolveAppSecret(credentials, resolved, internals.notify)
     if (secret !== undefined) resolved = { ...resolved, appSecret: secret }
+
+    // Enterprise fork: with no appId in the composition, reuse the app bound in
+    // the local lark-cli configuration (~/.lark-cli/config.json). Keeps the
+    // deployment template free of any app identifiers; the secret still comes
+    // from the credentials seam or the onboarding scan. Without a bound app,
+    // onboarding creates one (or lets the user pick an existing app to bind).
+    if ((resolved.appId === undefined || resolved.appId === '') && secret === undefined) {
+      const fromCli = readLarkCliAppId()
+      if (fromCli !== undefined) {
+        resolved = { ...resolved, appId: fromCli }
+        internals.notify(`lark-channel: reusing app id ${fromCli} from the local lark-cli configuration`)
+      }
+    } else if (resolved.appId === undefined || resolved.appId === '') {
+      // A stored secret without an appId still needs the bound app id to start.
+      const fromCli = readLarkCliAppId()
+      if (fromCli !== undefined) resolved = { ...resolved, appId: fromCli }
+    }
 
     if (hasCredentials(resolved)) {
       start(resolved)

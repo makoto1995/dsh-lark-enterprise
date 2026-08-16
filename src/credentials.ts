@@ -20,6 +20,10 @@
  * @module dsh-lark-channel/credentials
  */
 
+import { readFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join } from 'node:path'
+
 /** Where a resolved credential came from, as the provider reports it. */
 export interface ResolvedCredential {
   readonly value: string
@@ -52,6 +56,33 @@ export interface HostCredentials {
  * anything it stores itself.
  */
 export const APP_SECRET_REF = 'LARK_APP_SECRET'
+
+/** lark-cli 本地配置路径（跨平台：~/.lark-cli/config.json）。 */
+export function larkCliConfigPath(home: string = homedir()): string {
+  return join(home, '.lark-cli', 'config.json')
+}
+
+/**
+ * 从 lark-cli 本地配置复用 app id（企业 fork 增强）。
+ *
+ * 模板/部署配置保持零应用配置：首次启动无 appId 时，若本机 lark-cli 已绑定
+ * 应用（`lark-cli config init` 完成过），直接复用其 appId —— secret 仍走
+ * 凭据层（appSecretRef / onboarding 扫码授权后持久化），应用标识本身并非
+ * 敏感信息。未找到时返回 undefined，调用方回退到 onboarding 扫码创建。
+ * @param home - 可选注入的用户主目录（测试用）；缺省 os.homedir()。
+ * @returns 第一个已绑定应用的 appId，或 undefined。
+ */
+export function readLarkCliAppId(home: string = homedir()): string | undefined {
+  try {
+    const parsed = JSON.parse(readFileSync(larkCliConfigPath(home), 'utf8')) as {
+      apps?: { appId?: unknown }[]
+    } | null
+    const appId = parsed?.apps?.[0]?.appId
+    return typeof appId === 'string' && appId !== '' ? appId : undefined
+  } catch {
+    return undefined
+  }
+}
 
 /** A reference must be a shell identifier; the seam brands them that way. */
 const REF_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/

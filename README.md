@@ -1,172 +1,120 @@
-# dsh-lark · DeepSeek Harness 飞书 / Lark 插件
+# dsh-lark-enterprise · DeepSeek Harness 飞书渠道插件（企业 fork）
 
-[![npm](https://img.shields.io/npm/v/dsh-lark-channel)](https://www.npmjs.com/package/dsh-lark-channel) [![CI](https://github.com/omdsh-dev/dsh-lark/actions/workflows/ci.yml/badge.svg)](https://github.com/omdsh-dev/dsh-lark/actions/workflows/ci.yml) [![license](https://img.shields.io/badge/license-BSD--3--Clause-blue)](LICENSE)
+[![license](https://img.shields.io/badge/license-BSD--3--Clause-blue)](LICENSE)
+[![upstream](https://img.shields.io/badge/upstream-dsh--lark--channel-4D6BFE)](https://github.com/omdsh-dev/dsh-lark)
 
 简体中文 | [English](README.en.md)
 
-**把你正在使用的 DeepSeek Harness（DSH）接进飞书。**
+**dsh-lark-channel 的企业 fork**：把 DeepSeek Harness（DSH）接进飞书/Lark——聊天驱动 Agent、卡片审批、cot 思考过程、多工作区、多 Agent 协作，并新增**公司单机器人场景**所需的**文档授权**能力与**零配置凭据 onboarding**。
 
-直接在聊天里给 Agent 派任务、看执行过程、切换工作区和模型。遇到提问、计划确认或工具审批，也不用回到终端，直接在飞书里处理。需要时，还能把多个 Agent 放进同一个群里协作。
+---
+
+## 与上游的主要区别
+
+| 维度 | 上游 dsh-lark-channel | 本 fork（dsh-lark-enterprise） |
+|---|---|---|
+| **文档授权** | ❌ 无 | ✅ **`feishu_share_document`**：bot 创建的文档/表格/文件夹把管理权限（`full_access`）分享给当前聊天对象（单聊用户/群），目标从通道会话 id 自动解析，无需手动传 ID；底层走飞书 OpenAPI 直连授权 |
+| **部署配置** | 需配置 `appId`（或扫码创建新应用） | ✅ **零应用配置**：模板不写任何应用标识/凭据；首次启动自动从本机 lark-cli 配置（`~/.lark-cli/config.json`）复用已绑定应用的 appId |
+| **凭据 onboarding** | 扫码创建/重新授权，secret 持久化 | ✅ 同机制 + **lark-cli 绑定复用**：有 lark-cli 已绑定应用 → 扫码仅需确认授权；无 → 扫码创建；secret 一律存入 DSH 凭据层（`LARK_APP_SECRET`），settings 只存引用，**后续启动直接复用，不再提示** |
+| **平台可移植性** | 配置含应用标识 | ✅ 模板零部署特定值；凭据全走凭据层/环境变量；跨平台（Windows/macOS/Linux）一致 |
+| 消息通道 | @larksuite/channel SDK 长连接 | 同左（不变） |
+| 卡片 / 审批 / cot / 多工作区 / 多 Agent / 服务化 | ✅ | ✅ 全部保留（不变） |
+
+**一句话**：fork 只做加法——`feishu_share_document`（文档授权）与 `readLarkCliAppId`（lark-cli 绑定复用）两个增量，其余与上游一致，可平滑跟随上游更新。
+
+---
 
 ## 快速开始
 
-```sh
-npm i -g dsh-lark-channel
-dsh-lark-channel start
-```
-
-终端会显示二维码。用飞书扫码完成应用创建，然后私聊机器人，或在群里 @ 它即可开始。
-
-不想装到全局也可以直接跑，只是之后每条命令都要带 `npx`：
+### 从 GitHub 安装（repo 创建后）
 
 ```sh
-npx dsh-lark-channel@latest start
-```
+# 把本仓库作为 bundle 装进 web profile（替换 <owner>/<repo>）
+dsh plugin --profile web add "github:<owner>/<repo>"
 
-如果还没有安装 DeepSeek Harness，先运行：
-
-```sh
-npm i -g @deepseek-ai/dsh
-```
-
-无需公网服务器，也无需配置回调地址。
-
-## 为什么值得装
-
-- **不用守着终端**：从飞书发起任务，随时查看进度和结果。
-- **不只是聊天机器人**：可以切换真实工作区和模型，执行 Harness 已有的命令与工具。
-- **关键决定仍由你控制**：模型提问、计划审阅和工具审批都会回到当前聊天，按钮或文字都能作答。
-- **上下文不会混在一起**：不同聊天、话题和工作区可以保留各自的会话。
-- **Agent 之间也能协作**：一条命令添加更多机器人，让它们在群聊中通过 @ 交接回合，并用轮数上限防止无限对话。
-
-## 可以这样开始
-
-先看看当前状态和可用工作区：
-
-```text
-/status
-/ws
-/cd my-project
-/model
-```
-
-然后直接派一个任务：
-
-```text
-检查这个项目为什么构建失败。先给我计划，需要操作时让我确认。
-```
-
-Agent 的执行过程会显示在飞书中；需要你参与时，会发送提问、计划或审批卡片。渠道自带文案会按每位读者的飞书语言显示中文或英文。
-
-## 主要能力
-
-| 能力 | 使用体验 |
-|---|---|
-| 持久会话 | 重启后可以恢复；后续消息继续当前上下文，`/new` 可以原地重开一个 |
-| 多工作区 | `/ws` 查看、`/cd` 切换；回到原工作区时继续之前的任务 |
-| 模型切换 | `/model` 打开模型选择卡片；切换后保留当前会话，也可随时恢复默认模型 |
-| 原生执行过程 | 在飞书中查看推理、工具调用和结果，最终答案单独发送 |
-| 人机协作卡片 | 单选、多选或文字回答问题；批准计划或提出修改意见；允许或拒绝工具调用 |
-| 实时状态 | `/status` 展示工作区、模型和 session；可用时还显示上下文占用与累计 token，并支持刷新 |
-| 会话隔离 | 可按聊天、话题或群成员划分独立 Agent 会话 |
-| 多 Agent 协作 | 多个机器人拥有独立设置、凭据和 session，可以在同一个群里对话与交接任务 |
-| 斜杠命令 | 宿主自带的命令（`/plan`、`/compact`、`/permission` 等）直接进入 DSH 命令运行时 |
-
-## 常用命令
-
-| 命令 | 用途 |
-|---|---|
-| `/status` | 查看并刷新工作区、模型和 session；可用时包含上下文与 token 状态 |
-| `/ws` | 查看可用工作区 |
-| `/cd <名称或路径>` | 切换工作区 |
-| `/model` | 打开模型选择卡片 |
-| `/model use <provider/model>` | 直接切换模型 |
-| `/model reset` | 恢复默认模型 |
-| `/new` | 原地开一个新会话，清空上下文，工作区和模型保持不变 |
-| `/stop` | 停止当前任务 |
-| `/help` | 查看全部命令（含宿主提供的） |
-
-## 日常运行
-
-macOS 和采用 systemd 的 Linux 会使用用户级后台服务，关闭终端后仍可运行：
-
-```sh
-dsh-lark-channel status
-dsh-lark-channel logs -f
-dsh-lark-channel restart
-dsh-lark-channel stop
-```
-
-用 `npx` 启动的话，这些命令同样要带 `npx dsh-lark-channel@latest` 前缀——工具会按你实际的启动方式打印提示，读到什么就能直接粘贴。
-
-升级：
-
-```sh
-dsh-lark-channel upgrade
-```
-
-它会装上最新的 CLI 并在新版本上重启机器人。用 npx 的话不需要这一步，`npx dsh-lark-channel@latest start` 本来就是最新。有新版本时，`start` 和 `status` 会顺带提醒你一行。
-
-连接异常时，插件会在限额和退避控制下自动重建 WebSocket，避免进程仍在但机器人已经静默离线。
-
-### 添加更多 Agent
-
-给第二个飞书应用添加一套独立的 Agent：
-
-```sh
-dsh-lark-channel add reviewer
-```
-
-命令会写入新实例、重启服务并显示二维码。扫码后，这个机器人拥有自己的设置、App Secret 和 session，不会与第一个机器人共享上下文。
-
-把两个机器人加入同一个群后，它们可以通过 @ 把回合交给对方。例如，让一个 Agent 完成修改后 @ 另一个 Agent 复核，后者也可以 @ 回去要求调整。默认最多连续进行 6 个机器人轮次；任何人发言都会恢复额度。需要移除时：
-
-```sh
-dsh-lark-channel remove reviewer
-```
-
-移除会保留该实例的凭据和设置，之后用同一个名字重新添加即可恢复。
-
-如果希望飞书和 `dsh web` 共用同一个 profile：
-
-```sh
-dsh plugin --profile web add dsh-lark-channel@latest
+# 首次启动：打印二维码 → 扫码确认绑定已有应用（或创建新应用）
 dsh web
 ```
 
-<details>
-<summary>权限与高级选项</summary>
+### 本地构建安装
 
-- 飞书应用的可用范围决定谁能找到机器人；`senderAllowlist`、`groupAllowlist` 和 `approvers` 可以进一步收窄权限。
-- `workspaceRoots` 可以限制聊天中允许切换到的目录。
-- `sessionScope` 支持 `chat`、`chat-thread` 和 `chat-sender` 三种会话粒度。
-- `instance` 用于命名额外的机器人实例；第一个机器人保持未命名，以兼容已有设置和会话。
-- `botPeers` 可以限制允许对话的机器人，`botHops` 控制连续机器人轮次，默认是 6。
-- 会改变状态的卡片绑定原聊天，转发到其他聊天后不能操作原会话。
-- 部署提供 credentials 服务时，扫码得到的 App Secret 会存入其中；旧版本写在 settings 中的 secret 会在下次启动时自动迁移。
-- 图片附件默认关闭；只有确认当前模型支持视觉时，才应开启 `attachImages`。
-- 配置在启动时读取，修改后需要重启服务。
+```sh
+git clone <your-repo-url>
+cd dsh-lark-enterprise
+pnpm install && pnpm build && pnpm pack
+# 把产物 .tgz 装进 profile
+dsh plugin --profile web add ./dsh-lark-enterprise-<version>.tgz
+```
 
-</details>
+> 前置：Node.js `^22.19.0 || >=24`、DeepSeek Harness（`npm i -g @deepseek-ai/dsh`）、飞书/Lark 租户。
+
+### 凭据流程（零配置）
+
+1. **首次启动**：插件读取本机 lark-cli 绑定（`~/.lark-cli/config.json`）复用 appId，打印二维码；
+2. **扫码**：确认绑定已有应用（或创建新应用），secret 自动存入 DSH 凭据层（`LARK_APP_SECRET`），settings 仅记录引用；
+3. **之后启动**：直接复用本地持久化配置，不再出现 onboarding。
+
+> 不装 lark-cli 也可以：首次启动同样走扫码流程（创建新应用），secret 照常持久化。
+
+---
+
+## 文档授权（企业版核心新增）
+
+公司统一机器人场景：bot 以应用身份创建的文档归 bot 所有，必须显式授权聊天对象才能访问。
+
+```text
+帮我创建一个周报文档，然后分享给我
+```
+
+Agent 创建文档后调用 `feishu_share_document`（`token` + `type`），自动把 `full_access` 授予当前聊天对象：
+
+| 会话粒度 | 授权目标 |
+|---|---|
+| 单聊（chat-sender） | 该用户（openid） |
+| 群聊（chat） | 整个群（openchat） |
+| 话题（chat-thread） | 回退授权给所在会话 |
+
+配置（`cordis.patch.yml` 的 `lark-channel` 行）：
+
+| 配置 | 默认 | 说明 |
+|---|---|---|
+| `shareEnabled` | true | 是否给 chat agent 提供该工具 |
+| `sharePerm` | full_access | 默认权限角色（view/edit/full_access），模型可每次覆盖 |
+
+前置：飞书开发者后台为应用开通 `docs:permission.member:create` + 资源 scope（`drive:drive` / `docs:doc` / `sheets:spreadsheet` / `bitable:app` 等）。
+
+---
+
+## 完整能力（与上游一致）
+
+- **持久会话**：重启恢复，`/new` 原地重开；
+- **多工作区**：`/ws` 查看、`/cd` 切换；
+- **模型切换**：`/model` 卡片选择，按会话记忆；
+- **原生执行过程**：cot 思考过程 + 最终答案单独发送（老客户端可用 `output: 'stream'`）；
+- **人机协作卡片**：提问、计划审批、工具审批；
+- **会话隔离**：`chat` / `chat-thread` / `chat-sender` 三级；
+- **多 Agent 协作**：多机器人群聊 @ 交接，`botHops` 轮次上限；
+- **斜杠命令**：`/status` `/new` `/stop` `/help` + 宿主命令透传；
+- **服务化**：macOS/systemd 用户级后台服务（`dsh-lark-channel status/logs/restart/stop`）；
+- **断线自愈**：WebSocket 限额退避自动重建。
 
 ## 环境要求
 
 - Node.js `^22.19.0 || >=24`
-- DeepSeek Harness `0.1.0-rc.6` 或更新版本
-- 飞书或 Lark 租户
-
-原生思考过程需要飞书 PC 7.70、移动端 7.74 或更新版本；旧客户端可以使用 `output: 'stream'`。
+- DeepSeek Harness `0.1.0-rc.6` 或更新
+- 飞书或 Lark 租户（cot 原生思考过程需飞书 PC 7.70 / 移动端 7.74+）
 
 ## 开发
 
 ```sh
 pnpm install
 pnpm test
+pnpm typecheck
 pnpm build
 ```
 
 ## License
 
-[BSD-3-Clause](LICENSE)
+[BSD-3-Clause](LICENSE)，保留上游 [dsh-lark-channel](https://github.com/omdsh-dev/dsh-lark) 版权声明。
 
 本项目是非官方社区插件，与 DeepSeek、飞书或 Lark 不存在隶属、授权或背书关系。

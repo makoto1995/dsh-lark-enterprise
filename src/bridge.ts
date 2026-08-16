@@ -72,6 +72,7 @@ import { ChatQuestions, questionActionValue, shadowQuestionTool } from './questi
 import { PLAN_TOOL, planReviewQuestion, shadowPlanTool } from './plan.ts'
 import type { HostPlanMode, PlanReviewPorts } from './plan.ts'
 import type { AskedQuestion, QuestionAnswer } from './questions.ts'
+import { shareDocumentTool } from './share.ts'
 import { ownVersion } from './version.ts'
 import { collectImages } from './images.ts'
 import type { CollectedImages, ImagePort } from './images.ts'
@@ -300,6 +301,9 @@ const RECONNECT_QUOTA_LIMIT = 10
 /** The host tool this channel shadows so questions become chat cards. */
 const QUESTION_TOOL = 'ask_user_question'
 
+/** The enterprise-added tool that shares bot-owned documents to the chat counterpart. */
+const SHARE_TOOL = 'feishu_share_document'
+
 /**
  * How many unclaimed reply targets may wait for their `user/message` event. A
  * target is claimed within one turn ordinarily; the cap only matters when an
@@ -403,6 +407,13 @@ function composeChatAgent(
     && tools?.register !== undefined
   if (shadowedPlan) tools?.register?.(shadowPlanTool(planReview!))
   if (!shadowedPlan && planReview?.planMode() !== undefined) denied.add(PLAN_TOOL)
+
+  // feishu_share_document：bot 创建文档后把管理权限分享给当前聊天对象。
+  // 公司单机器人场景的必需能力（文档归 bot 所有，必须显式授权）；同样遵守
+  // denyTools 收窄。
+  if (config.shareEnabled && !denied.has(SHARE_TOOL) && tools?.register !== undefined) {
+    tools.register(shareDocumentTool(config))
+  }
 
   // Every chat agent gets its bearings, denials or none: an agent told nothing
   // about where it woke up treats a chat like a ticket queue.

@@ -4,7 +4,7 @@
 
 - insert:
     - id: lark-channel
-      name: 'dsh-lark-channel'
+      name: 'dsh-lark-enterprise'
       config:
         # Credentials layer as: these entry values (env via `!!js`, never
         # `!js`) → the user settings document. With neither set, first boot
@@ -30,6 +30,15 @@
         # syncSlashCommands: true    # publish commands to the bot's `/` panel
         # sessionScope: chat         # chat-thread / chat-sender split it finer
         requireMention: true
+        # ── enterprise fork: feishu_share_document ─────────────────────────
+        # Chat agents get the `feishu_share_document` tool: bot-created docs get
+        # full_access shared to the current chat counterpart via lark-cli
+        # (`drive permission.members create`). lark-cli (@larksuite/cli) must be
+        # installed; point `shareLarkCliEntry` at its run.js when auto-detect
+        # misses. Turn off with shareEnabled: false.
+        # shareEnabled: true
+        # sharePerm: full_access       # default role; model may override per call
+        # shareLarkCliEntry: ''        # e.g. /usr/local/lib/node_modules/@larksuite/cli/scripts/run.js
         # Authorization narrows; it does not gate. Who can reach the bot at all
         # is the app's visibility scope in the developer console. Unconfigured,
         # this serves any room it is added to (when @-mentioned) and anyone the

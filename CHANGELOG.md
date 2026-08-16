@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.1 — 2026-08-17
+
+Enterprise fork of [dsh-lark-channel](https://github.com/omdsh-dev/dsh-lark) 0.0.6.
+
+### Added
+- `feishu_share_document` tool (`src/share.ts`): chat agents share `full_access` of bot-created documents/tables/folders with the current chat counterpart (DM user via openid, group via openchat, thread falls back to the chat). Target is resolved from the channel session id (`lark-<conversationKey>`, epoch suffix stripped); authorization runs through the Feishu drive OpenAPI (`drive/v1/permissions/{token}/members`) with `tenant_access_token` — no local lark-cli runtime dependency. Config: `shareEnabled` (default true), `sharePerm` (default `full_access`).
+- `readLarkCliAppId` (`src/credentials.ts`): when the composition carries no `appId`, the app bound in the local lark-cli configuration (`~/.lark-cli/config.json`) is reused automatically. Deployment templates stay free of any app identifiers; the secret still comes from the credentials seam or the onboarding scan.
+
+### Changed
+- Bootstrap (`src/runtime.ts`): appId is backfilled from the local lark-cli configuration before the credential/onboarding decision, so a stored secret plus a lark-cli-bound app starts directly with no QR, and a bound app without a secret goes straight to the confirm-and-authorize scan.
+
 ## 0.0.6 — 2026-08-15
 
 ### Added

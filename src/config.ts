@@ -186,6 +186,17 @@ export interface Config {
    * should need a named human — it grants more power than the sandbox allows.
    */
   approvers?: string[]
+  /**
+   * Whether chat agents get the `feishu_share_document` tool (bot-created
+   * document full_access sharing to the current chat counterpart).
+   * Enterprise single-bot deployments should keep it on; turn it off when the
+   * deployment has no lark-cli installed.
+   */
+  shareEnabled?: boolean
+  /** Default permission role for `feishu_share_document`; the model may override per call. */
+  sharePerm?: 'view' | 'edit' | 'full_access'
+  /** lark-cli node entry (absolute path to @larksuite/cli/scripts/run.js); empty auto-detects. */
+  shareLarkCliEntry?: string
 }
 
 /** Configuration after defaults have been resolved; credentials may still be pending onboarding. */
@@ -216,6 +227,9 @@ export interface ResolvedConfig {
   senderAllowlist: string[]
   groupAllowlist: string[]
   approvers: string[]
+  shareEnabled: boolean
+  sharePerm: 'view' | 'edit' | 'full_access'
+  shareLarkCliEntry: string
 }
 
 /** Loader-visible configuration schema and defaults. */
@@ -246,6 +260,9 @@ export const Config: z<Config> = z.object({
   senderAllowlist: z.array(String),
   groupAllowlist: z.array(String),
   approvers: z.array(String),
+  shareEnabled: z.boolean().default(true),
+  sharePerm: z.union(['view', 'edit', 'full_access'] as const).default('full_access'),
+  shareLarkCliEntry: z.string(),
 })
 
 /**
@@ -273,5 +290,8 @@ export function resolveConfig(config: Config): ResolvedConfig {
     senderAllowlist: config.senderAllowlist ?? [],
     groupAllowlist: config.groupAllowlist ?? [],
     approvers: config.approvers ?? [],
+    shareEnabled: config.shareEnabled ?? true,
+    sharePerm: config.sharePerm ?? 'full_access',
+    shareLarkCliEntry: config.shareLarkCliEntry ?? '',
   }
 }
