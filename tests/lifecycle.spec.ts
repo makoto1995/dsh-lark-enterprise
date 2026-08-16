@@ -94,4 +94,15 @@ describe('LifecycleNotifier', () => {
     await Promise.resolve()
     expect(sent.length).toBe(0)
   })
+
+  it('tolerates a frozen activity object from the config layer', async () => {
+    // The loader/settings layer hands out frozen config objects; recordActivity
+    // must copy rather than mutate in place, or the message handler throws.
+    const frozen = Object.freeze({ oc_a: 100 })
+    const { notifier, sent } = createNotifier({ activity: frozen })
+    expect(() => notifier.recordActivity('oc_b')).not.toThrow()
+    notifier.notifyRestored()
+    await Promise.resolve()
+    expect(sent.map(s => s.chatId).sort()).toEqual(['oc_a', 'oc_b'])
+  })
 })

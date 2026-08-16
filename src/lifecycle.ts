@@ -73,7 +73,11 @@ export class LifecycleNotifier {
 
   constructor(options: LifecycleOptions) {
     this.enabled = options.enabled
-    this.activity = options.activity
+    // Copy, never alias: the config object a loader/settings layer hands us may
+    // be frozen (deep-frozen resolved config), and recordActivity mutates the
+    // map in place — writing to a frozen object would throw and kill the
+    // message handler that called it.
+    this.activity = { ...options.activity }
     this.persist = options.persist ?? (async () => false)
     this.report = options.report ?? (() => {})
     this.port = options.port
