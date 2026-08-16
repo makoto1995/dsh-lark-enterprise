@@ -1,14 +1,16 @@
 import { mkdtempSync, realpathSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { basename, join } from 'node:path'
+import { basename, join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { sessionIdFor } from '../src/session.ts'
 import {
   ChatWorkspaces,
   expandHome,
   forbiddenReason,
+  perConversationPath,
   probeDirectory,
   runWorkspaceCommand,
+  sanitizeConversationKey,
   withinRoots,
   workspaceSessionId,
 } from '../src/workspace.ts'
@@ -239,5 +241,55 @@ describe('runWorkspaceCommand', () => {
     expect(reply).toContain('默认')
     expect(reply).toContain('/srv/alpha')
     expect(reply).toContain('当前')
+  })
+})
+
+describe('per-chat workspace root (enterprise fork)', () => {
+  function perChatStore() {
+    return new ChatWorkspaces({
+      defaultPath: '/srv/default',
+      perChatRoot: '/srv/chat-workspaces',
+      probe: fakeProbe(['/srv/default', '/srv/alpha']),
+      home: '/home/me',
+    })
+  }
+
+  it('sanitizes conversation keys into safe path segments', () => {
+    expect(sanitizeConversationKey('oc_a1:ou_u1')).toBe('oc_a1_ou_u1')
+    expect(sanitizeConversationKey('oc_a1:omt_t1')).toBe('oc_a1_omt_t1')
+    expect(sanitizeConversationKey('oc_plain')).toBe('oc_plain')
+    expect(perConversationPath('/srv/chat-workspaces', 'oc_a1:ou_u1'))
+      .toBe(resolve('/srv/chat-workspaces/oc_a1_ou_u1'))
+  })
+
+  it('derives a per-conversation directory when no /cd entry exists', () => {
+    const store = perChatStore()
+    expect(store.pathFor('oc_a1:ou_u1')).toBe(resolve('/srv/chat-workspaces/oc_a1_ou_u1'))
+    expect(store.pathFor('oc_b2')).toBe(resolve('/srv/chat-workspaces/oc_b2'))
+  })
+
+  it('keeps the shared default without perChatRoot', () => {
+    const store = new ChatWorkspaces({
+      defaultPath: '/srv/default',
+      probe: fakeProbe(['/srv/default']),
+      home: '/home/me',
+    })
+    expect(store.pathFor('oc_a1:ou_u1')).toBe('/srv/default')
+  })
+
+  it('isolates session ids per conversation via the derived directory', () => {
+    const store = perChatStore()
+    const idA = store.baseSessionIdFor('oc_a1:ou_u1')
+    const idB = store.baseSessionIdFor('oc_a1:ou_u2')
+    expect(idA).not.toBe(idB)
+    // Deterministic: the same conversation derives the same id every time.
+    expect(store.baseSessionIdFor('oc_a1:ou_u1')).toBe(idA)
+  })
+
+  it('lets /cd override the derived directory', async () => {
+    const store = perChatStore()
+    const result = await store.switch('oc_a1:ou_u1', '/srv/alpha')
+    expect(result.ok).toBe(true)
+    expect(store.pathFor('oc_a1:ou_u1')).toBe('/srv/alpha')
   })
 })

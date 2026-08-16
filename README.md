@@ -93,6 +93,7 @@ Agent 创建文档后调用 `feishu_share_document`（`token` + `type`），自�
 |---|---|---|
 | `shareEnabled` | true | 是否给 chat agent 提供该工具 |
 | `sharePerm` | full_access | 默认权限角色（view/edit/full_access），模型可每次覆盖 |
+| `workspaceRoot` | "" | **每个对话自动派生独立工作目录** `<workspaceRoot>/<对话key>`（首次对话自动创建，key 已做文件系统安全化）；派生目录参与 session id → 每个对话/用户的**工作目录与记忆双重隔离**。配 `sessionScope: chat-sender` 即"每用户独立目录+独立上下文"。空 = 所有对话共享 `cwd`（上游行为）。`/cd` 仍可覆盖 |
 
 前置：飞书开发者后台为应用开通 `docs:permission.member:create` + 资源 scope（`drive:drive` / `docs:doc` / `sheets:spreadsheet` / `bitable:app` 等）。
 

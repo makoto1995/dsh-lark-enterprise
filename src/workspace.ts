@@ -31,6 +31,29 @@ export const WS_COMMAND = 'ws'
 const DEFAULT_MARKER = ''
 
 /**
+ * Sanitize a conversation key into one safe path segment. Keys carry `:`
+ * between facets (chat-sender: `chatId:senderId`, chat-thread: `chatId:threadId`),
+ * which is illegal on Windows; every non-safe character becomes `_`.
+ * @param key - conversation key.
+ * @returns a filesystem-safe segment, still unique per key.
+ */
+export function sanitizeConversationKey(key: string): string {
+  return key.replace(/[^A-Za-z0-9._-]/gu, '_')
+}
+
+/**
+ * The per-conversation directory a conversation derives when the deployment
+ * sets `workspaceRoot`: `<workspaceRoot>/<sanitized key>`. Deterministic, so a
+ * restarted process reaches the same directory (and therefore the same session).
+ * @param root - configured per-conversation workspace root.
+ * @param key - conversation key.
+ * @returns the derived directory path.
+ */
+export function perConversationPath(root: string, key: string): string {
+  return resolve(root, sanitizeConversationKey(key))
+}
+
+/**
  * Verdict on one directory: its canonical path, or why it cannot be a workspace.
  * Injectable so command tests need no real filesystem.
  */
@@ -152,6 +175,14 @@ export interface ChatWorkspacesOptions {
    * already uses with the host instead of memorizing paths.
    */
   readonly known?: (() => readonly string[]) | undefined
+  /**
+   * Per-conversation workspace root (enterprise fork): when set, a
+   * conversation with no explicit `/cd` entry derives its own directory
+   * `<root>/<sanitized key>` instead of the shared default, and that directory
+   * participates in the session id so each conversation/user owns an isolated
+   * workspace AND memory.
+   */
+  readonly perChatRoot?: string | undefined
 }
 
 /**
@@ -163,6 +194,7 @@ export interface ChatWorkspacesOptions {
 export class ChatWorkspaces {
   private readonly entries: Map<string, string>
   private readonly defaultPath: string
+  private readonly perChatRoot: string | undefined
   /** The default's canonical form, for deciding that a `/cd` target IS the default. */
   private readonly defaultCanonical: string
   private readonly roots: readonly string[]
@@ -178,6 +210,7 @@ export class ChatWorkspaces {
 
   constructor(options: ChatWorkspacesOptions) {
     this.defaultPath = options.defaultPath
+    this.perChatRoot = options.perChatRoot
     this.roots = options.roots ?? []
     this.persist = options.persist ?? (async () => false)
     this.report = options.report ?? (() => {})
@@ -191,24 +224,36 @@ export class ChatWorkspaces {
     this.defaultCanonical = 'canonical' in probed ? probed.canonical : this.defaultPath
   }
 
-  /** The directory one conversation's next session runs in. */
+  /**
+   * The directory one conversation's next session runs in. With `perChatRoot`
+   * set and no `/cd` entry, every conversation derives its own directory
+   * (auto-created by the caller at session creation).
+   */
   pathFor(key: string): string {
     const entry = this.entries.get(key)
-    return entry === undefined || entry === DEFAULT_MARKER ? this.defaultPath : entry
+    if (entry !== undefined && entry !== DEFAULT_MARKER) return entry
+    if (this.perChatRoot !== undefined) return perConversationPath(this.perChatRoot, key)
+    return this.defaultPath
   }
 
   /**
    * The id this conversation derives before it ever started over. The epoch
    * map is keyed by it, so a `/new` in one directory leaves the thread in
-   * another untouched.
+   * another untouched. A derived per-chat directory participates in the id
+   * (same digest mechanism as `/cd` overrides), so two conversations never
+   * share one session even under a shared default.
    * @param key - conversation key.
    * @returns the session id at epoch zero.
    */
   baseSessionIdFor(key: string): string {
     const entry = this.entries.get(key)
-    return entry === undefined || entry === DEFAULT_MARKER
-      ? workspaceSessionId(key, undefined, this.sessionPrefix)
-      : workspaceSessionId(key, entry, this.sessionPrefix)
+    if (entry !== undefined && entry !== DEFAULT_MARKER) {
+      return workspaceSessionId(key, entry, this.sessionPrefix)
+    }
+    if (this.perChatRoot !== undefined) {
+      return workspaceSessionId(key, perConversationPath(this.perChatRoot, key), this.sessionPrefix)
+    }
+    return workspaceSessionId(key, undefined, this.sessionPrefix)
   }
 
   /** The session id one conversation currently resolves to. */

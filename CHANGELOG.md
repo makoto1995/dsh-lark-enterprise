@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Added
+- `workspaceRoot` config (enterprise fork): each conversation derives its own auto-created workspace directory (`<workspaceRoot>/<sanitized conversation key>`) instead of sharing `cwd`; the derived directory participates in the session id, so every conversation/user gets isolated workspace AND memory. Created on first contact; `/cd` still overrides.
+
 ### Changed
 - Bootstrap now guides the operator through the lark-cli prerequisite before onboarding: when no appId is configured and no app is bound, it prints a prompt to install lark-cli (`npm i -g @larksuite/cli`) or to run `lark-cli config init --new` to create/bind an app; the onboarding QR remains the fallback.
 

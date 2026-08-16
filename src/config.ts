@@ -197,6 +197,16 @@ export interface Config {
   sharePerm?: 'view' | 'edit' | 'full_access'
   /** lark-cli node entry (absolute path to @larksuite/cli/scripts/run.js); empty auto-detects. */
   shareLarkCliEntry?: string
+  /**
+   * Per-conversation workspace root (enterprise fork): when set, every
+   * conversation gets its own auto-created directory `<workspaceRoot>/<key>`
+   * (key sanitized) as its default workspace instead of the shared `cwd`, and
+   * the derived directory participates in the session id, so each
+   * conversation/user owns an isolated workspace AND memory. Pair with
+   * `sessionScope: chat-sender` for per-user isolation. `/cd` still works on
+   * top of it. Empty keeps the upstream shared-default behavior.
+   */
+  workspaceRoot?: string
 }
 
 /** Configuration after defaults have been resolved; credentials may still be pending onboarding. */
@@ -230,6 +240,7 @@ export interface ResolvedConfig {
   shareEnabled: boolean
   sharePerm: 'view' | 'edit' | 'full_access'
   shareLarkCliEntry: string
+  workspaceRoot: string
 }
 
 /** Loader-visible configuration schema and defaults. */
@@ -263,6 +274,7 @@ export const Config: z<Config> = z.object({
   shareEnabled: z.boolean().default(true),
   sharePerm: z.union(['view', 'edit', 'full_access'] as const).default('full_access'),
   shareLarkCliEntry: z.string(),
+  workspaceRoot: z.string(),
 })
 
 /**
@@ -293,5 +305,6 @@ export function resolveConfig(config: Config): ResolvedConfig {
     shareEnabled: config.shareEnabled ?? true,
     sharePerm: config.sharePerm ?? 'full_access',
     shareLarkCliEntry: config.shareLarkCliEntry ?? '',
+    workspaceRoot: config.workspaceRoot ?? '',
   }
 }

@@ -6,6 +6,7 @@
  */
 
 import { randomUUID } from 'node:crypto'
+import { mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import type {
@@ -514,6 +515,9 @@ export function installBridge(
     roots: config.workspaceRoots,
     persist: persistState,
     report: notify,
+    // Enterprise fork: each conversation derives its own auto-created
+    // workspace directory under `workspaceRoot` instead of sharing `cwd`.
+    ...config.workspaceRoot === '' ? {} : { perChatRoot: config.workspaceRoot },
     // Every session id this row derives carries its own prefix, so two bots
     // invited to one group drive two agents rather than fighting over one.
     sessionPrefix: instanceIdentity(config.instance).sessionPrefix,
@@ -788,6 +792,14 @@ export function installBridge(
       // The workspace's own canonical path, so `attachSession` finds the header
       // cwd it validates against rather than an uncanonicalized variant of it.
       const directory = pathBySession.get(sessionId) ?? defaultCwd
+      // Enterprise fork: a conversation's derived per-chat directory is created
+      // automatically on first contact (the "each user gets their own folder"
+      // behavior); a `workspaceRecordFor` probe would reject a missing
+      // directory, so the workspace record is looked up after the mkdir.
+      if (config.workspaceRoot !== '') {
+        mkdirSync(directory, { recursive: true })
+        notify(`lark-channel: ensured per-conversation workspace ${directory}`)
+      }
       const workspace = await workspaceRecordFor(directory)
       const handle = await agents.create({
         sessionId,
