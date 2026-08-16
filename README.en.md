@@ -49,16 +49,24 @@ dsh plugin --profile web add ./dsh-lark-enterprise-<version>.tgz
 
 ### Credential flow (zero config)
 
-When the composition carries no `appId`, the plugin guides the operator by environment (guidance is printed to the operator console; the QR scan always remains the fallback):
+When the composition carries no `appId`, the plugin guides the operator by environment (guidance is printed to the operator console; the QR scan always remains the fallback). **The lark-cli path needs TWO links — both required**:
 
-1. **lark-cli not installed** → prompt: `npm i -g @larksuite/cli && lark-cli config init --new` to install and create/bind an app (or scan the QR to create one directly);
-2. **lark-cli installed but no app bound** → prompt: run `lark-cli config init --new` to create and bind an app (or scan the QR to create one directly);
-3. **App bound** (`~/.lark-cli/config.json`) → appId reused automatically;
-   - secret already in the credentials seam (`LARK_APP_SECRET`) → starts directly;
-   - no secret → QR printed; scanning confirms authorization of that app, and the secret is stored in the credentials seam;
+1. **lark-cli not installed** → prompt: `npm i -g @larksuite/cli && lark-cli config init --new`;
+2. **lark-cli installed but no app bound** → prompt: run `lark-cli config init --new` — it prints **link ① (create/bind app)**, open it;
+3. **Start this service** → the bound app id is reused and **link ② (confirm & authorize)** is printed; scan/authorize to store the secret in the credentials seam;
 4. **Later boots**: reuse the persisted local state, no onboarding prompt.
 
-> lark-cli is optional: without it, the QR flow works too (creates a new app) and persists the secret the same way.
+> ⚠️ Both links are required: completing only ① (app creation) without ② (authorization) leaves the bot without a secret and it cannot start. Restart the service to re-trigger ② (QR valid for 60 minutes).
+>
+> lark-cli is optional: without it, the QR flow works too (① is handled by the scan page, ② unchanged) and persists the secret the same way.
+
+### Required developer-console setup (or no messages arrive)
+
+After app creation/authorization, configure in the Feishu developer console (the SDK prompts on startup):
+
+- **Events and Callbacks → subscription mode → receive events/callbacks through persistent connection (long connection)** — required;
+- Add event **`im.message.receive_v1`**;
+- Enable the **bot** capability and message scopes (`im:message`, `im:message:readonly`, etc.).
 
 ---
 

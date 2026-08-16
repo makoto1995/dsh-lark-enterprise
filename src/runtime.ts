@@ -246,6 +246,11 @@ export function apply(ctx: Context, config: Config): void {
     // template free of any app identifiers; the secret still comes from the
     // credentials seam or the onboarding scan. Notifications are guidance
     // only — onboarding QR stays available as the fallback either way.
+    //
+    // The lark-cli path is TWO links, both required: (1) `lark-cli config init`
+    // prints the app-creation/binding link; (2) the onboarding below prints the
+    // confirm-and-authorize link for that app. Missing either one leaves the
+    // channel unable to start, so both prompts name both steps.
     if (resolved.appId === undefined || resolved.appId === '') {
       const fromCli = readLarkCliAppId()
       if (fromCli !== undefined) {
@@ -253,15 +258,17 @@ export function apply(ctx: Context, config: Config): void {
         internals.notify(`lark-channel: reusing app id ${fromCli} from the local lark-cli configuration`)
       } else if (secret === undefined) {
         const entry = resolveLarkCliEntry(resolved)
+        const steps = '需要完成两步：① 打开下方/上方链接创建或绑定应用；② 创建后重新启动本服务，'
+          + '扫描出现的第二个确认授权链接。两步缺一不可，否则机器人无法启动。'
         if (entry === '') {
           internals.notify(
-            'lark-channel: 未检测到 lark-cli（@larksuite/cli）。请先安装并创建/绑定应用：'
-            + 'npm i -g @larksuite/cli && lark-cli config init --new；或直接扫描下方二维码创建应用。',
+            'lark-channel: 未检测到 lark-cli（@larksuite/cli）。请先安装：npm i -g @larksuite/cli，'
+            + `然后运行 lark-cli config init --new 获取“创建应用”链接并完成。${steps}`,
           )
         } else {
           internals.notify(
             'lark-channel: 本机已安装 lark-cli 但尚未绑定飞书应用。请运行 lark-cli config init --new '
-            + '创建并绑定应用；或直接扫描下方二维码创建应用。',
+            + `获取“创建应用”链接并完成（创建后本服务将自动复用该应用）。${steps}`,
           )
         }
       }

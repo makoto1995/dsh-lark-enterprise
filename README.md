@@ -50,16 +50,24 @@ dsh plugin --profile web add ./dsh-lark-enterprise-<version>.tgz
 
 ### 凭据流程（零配置）
 
-启动时若配置中无 `appId`，插件按环境引导（提示打印在 operator 控制台，QR 扫码始终是兜底）：
+启动时若配置中无 `appId`，插件按环境引导（提示打印在 operator 控制台；QR 扫码始终是兜底）。**lark-cli 路径需要完成两个链接，缺一不可**：
 
-1. **未安装 lark-cli** → 提示：`npm i -g @larksuite/cli && lark-cli config init --new` 安装并创建/绑定应用（或直接扫码创建）；
-2. **已安装但未绑定应用** → 提示：运行 `lark-cli config init --new` 创建并绑定应用（或直接扫码创建）；
-3. **已绑定应用**（`~/.lark-cli/config.json`）→ 自动复用 appId；
-   - secret 已在凭据层（`LARK_APP_SECRET`）→ 直接启动；
-   - 无 secret → 打印二维码，扫码确认授权该应用，secret 自动存入凭据层；
+1. **未安装 lark-cli** → 提示：`npm i -g @larksuite/cli && lark-cli config init --new`；
+2. **已安装但未绑定应用** → 提示：运行 `lark-cli config init --new` —— 它会打印**链接 ①（创建/绑定应用）**，打开完成；
+3. **启动本服务** → 复用刚绑定（或已绑定）的 appId，打印**链接 ②（确认授权）**，打开确认授权该应用，secret 自动存入凭据层；
 4. **之后启动**：直接复用本地持久化配置，不再出现 onboarding。
 
-> 不装 lark-cli 也可以：扫码流程同样可用（创建新应用），secret 照常持久化。
+> ⚠️ 两个链接缺一不可：只完成①（创建应用）而未完成②（确认授权）时，机器人没有 secret，无法启动。重启服务即可重新触发②（QR 60 分钟有效）。
+>
+> 不装 lark-cli 也可以：扫码流程同样可用（①创建应用由扫码页承担，②确认授权不变），secret 照常持久化。
+
+### 开发者后台必配（否则收不到消息）
+
+应用创建/授权完成后，还需在飞书开发者后台配置（SDK 启动时会提示）：
+
+- **事件与回调 → 订阅方式 → 使用长连接接收事件/回调**（必须）；
+- 添加事件 **`im.message.receive_v1`**；
+- 启用**机器人**能力 + 消息权限（`im:message`、`im:message:readonly` 等）。
 
 ---
 
