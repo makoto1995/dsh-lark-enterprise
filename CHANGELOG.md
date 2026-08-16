@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+- Bootstrap now guides the operator through the lark-cli prerequisite before onboarding: when no appId is configured and no app is bound, it prints a prompt to install lark-cli (`npm i -g @larksuite/cli`) or to run `lark-cli config init --new` to create/bind an app; the onboarding QR remains the fallback.
+
 ## 0.1.1 — 2026-08-17
 
 Enterprise fork of [dsh-lark-channel](https://github.com/omdsh-dev/dsh-lark) 0.0.6.

@@ -50,11 +50,16 @@ dsh plugin --profile web add ./dsh-lark-enterprise-<version>.tgz
 
 ### 凭据流程（零配置）
 
-1. **首次启动**：插件读取本机 lark-cli 绑定（`~/.lark-cli/config.json`）复用 appId，打印二维码；
-2. **扫码**：确认绑定已有应用（或创建新应用），secret 自动存入 DSH 凭据层（`LARK_APP_SECRET`），settings 仅记录引用；
-3. **之后启动**：直接复用本地持久化配置，不再出现 onboarding。
+启动时若配置中无 `appId`，插件按环境引导（提示打印在 operator 控制台，QR 扫码始终是兜底）：
 
-> 不装 lark-cli 也可以：首次启动同样走扫码流程（创建新应用），secret 照常持久化。
+1. **未安装 lark-cli** → 提示：`npm i -g @larksuite/cli && lark-cli config init --new` 安装并创建/绑定应用（或直接扫码创建）；
+2. **已安装但未绑定应用** → 提示：运行 `lark-cli config init --new` 创建并绑定应用（或直接扫码创建）；
+3. **已绑定应用**（`~/.lark-cli/config.json`）→ 自动复用 appId；
+   - secret 已在凭据层（`LARK_APP_SECRET`）→ 直接启动；
+   - 无 secret → 打印二维码，扫码确认授权该应用，secret 自动存入凭据层；
+4. **之后启动**：直接复用本地持久化配置，不再出现 onboarding。
+
+> 不装 lark-cli 也可以：扫码流程同样可用（创建新应用），secret 照常持久化。
 
 ---
 

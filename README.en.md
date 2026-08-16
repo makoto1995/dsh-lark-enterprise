@@ -49,11 +49,16 @@ dsh plugin --profile web add ./dsh-lark-enterprise-<version>.tgz
 
 ### Credential flow (zero config)
 
-1. **First boot**: the plugin reuses the app bound in local lark-cli config (`~/.lark-cli/config.json`) and prints a QR;
-2. **Scan**: confirm binding the existing app (or create a new one); the secret is stored in the DSH credentials seam (`LARK_APP_SECRET`), settings keep only the reference;
-3. **Later boots**: reuse the persisted local state, no onboarding prompt.
+When the composition carries no `appId`, the plugin guides the operator by environment (guidance is printed to the operator console; the QR scan always remains the fallback):
 
-> lark-cli is optional: without it, first boot still runs the QR flow (creates a new app) and persists the secret the same way.
+1. **lark-cli not installed** → prompt: `npm i -g @larksuite/cli && lark-cli config init --new` to install and create/bind an app (or scan the QR to create one directly);
+2. **lark-cli installed but no app bound** → prompt: run `lark-cli config init --new` to create and bind an app (or scan the QR to create one directly);
+3. **App bound** (`~/.lark-cli/config.json`) → appId reused automatically;
+   - secret already in the credentials seam (`LARK_APP_SECRET`) → starts directly;
+   - no secret → QR printed; scanning confirms authorization of that app, and the secret is stored in the credentials seam;
+4. **Later boots**: reuse the persisted local state, no onboarding prompt.
+
+> lark-cli is optional: without it, the QR flow works too (creates a new app) and persists the secret the same way.
 
 ---
 
