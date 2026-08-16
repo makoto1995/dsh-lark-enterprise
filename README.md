@@ -16,11 +16,12 @@
 | **文档授权** | ❌ 无 | ✅ **`feishu_share_document`**：bot 创建的文档/表格/文件夹把管理权限（`full_access`）分享给当前聊天对象（单聊用户/群），目标从通道会话 id 自动解析，无需手动传 ID；底层走飞书 OpenAPI 直连授权 |
 | **部署配置** | 需配置 `appId`（或扫码创建新应用） | ✅ **零应用配置**：模板不写任何应用标识/凭据；首次启动自动从本机 lark-cli 配置（`~/.lark-cli/config.json`）复用已绑定应用的 appId |
 | **凭据 onboarding** | 扫码创建/重新授权，secret 持久化 | ✅ 同机制 + **lark-cli 绑定复用**：有 lark-cli 已绑定应用 → 扫码仅需确认授权；无 → 扫码创建；secret 一律存入 DSH 凭据层（`LARK_APP_SECRET`），settings 只存引用，**后续启动直接复用，不再提示** |
+| **GUI 图片上传** | ❌ 无 | ✅ **浏览器端入口**：web 界面输入栏新增「上传图片」按钮（装配在 composer 工具栏），选图后以合成粘贴事件交回原生草稿流程——模型支持图片时走原生图片块（配合 modlens 视觉包装 provider 转文字证据）；纯文本模型时被 modlens 粘贴接管转为路径文本，两端都可用 |
 | **平台可移植性** | 配置含应用标识 | ✅ 模板零部署特定值；凭据全走凭据层/环境变量；跨平台（Windows/macOS/Linux）一致 |
 | 消息通道 | @larksuite/channel SDK 长连接 | 同左（不变） |
 | 卡片 / 审批 / cot / 多工作区 / 多 Agent / 服务化 | ✅ | ✅ 全部保留（不变） |
 
-**一句话**：fork 只做加法——`feishu_share_document`（文档授权）与 `readLarkCliAppId`（lark-cli 绑定复用）两个增量，其余与上游一致，可平滑跟随上游更新。
+**一句话**：fork 只做加法——`feishu_share_document`（文档授权）、`readLarkCliAppId`（lark-cli 绑定复用）与 web 界面图片上传入口（client 插件）三个增量，其余与上游一致，可平滑跟随上游更新。
 
 ---
 

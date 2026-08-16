@@ -33,11 +33,13 @@
   "types": "lib/types/index.d.ts",
   "bin": {
     "dsh-lark-channel": "lib/cli.js"
-  },  "exports": {
+  },
+  "exports": {
     ".": {
       "types": "./lib/types/index.d.ts",
       "default": "./lib/index.js"
     },
+    "./client": "./dsh/client.js",
     "./invariant": {
       "types": "./lib/types/invariant.d.ts",
       "default": "./lib/invariant.js"
@@ -48,6 +50,7 @@
   "files": [
     "README.en.md",
     "cordis.patch.yml",
+    "dsh",
     "lib",
     "src"
   ],
@@ -77,6 +80,7 @@
     "@deepseek-ai/cordis-plugin-loader": "^1.0.2",
     "@types/node": "^22.20.0",
     "@types/qrcode-terminal": "^0.12.2",
+    "jsdom": "^30.0.1",
     "tsdown": "^0.22.2",
     "typescript": "^6.0.3",
     "unrun": "^0.3.1",
@@ -85,6 +89,11 @@
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [],
+      "immediately": true
     }
   }
 }
