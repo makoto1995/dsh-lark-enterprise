@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- `notifyLifecycle` config (default true): every recently active chat is told when the long connection drops ("⚠️ 服务连接中断，正在自动重连") and when it recovers ("✅ 服务已恢复"), throttled per chat (60s) to survive flapping networks. The audience is a settings-persisted activity map (written throttled, 5min), so a restarted process still knows which chats to tell; the notice after the first connect also covers the "process restarted" case. The interrupt notice on dispose (system restart / dsh exit) is best-effort because the process exits immediately.
 - `workspaceRoot` config (enterprise fork): each conversation derives its own auto-created workspace directory (`<workspaceRoot>/<sanitized conversation key>`) instead of sharing `cwd`; the derived directory participates in the session id, so every conversation/user gets isolated workspace AND memory. Created on first contact; `/cd` still overrides.
 
 ### Changed

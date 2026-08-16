@@ -94,6 +94,7 @@ Agent 创建文档后调用 `feishu_share_document`（`token` + `type`），自�
 | `shareEnabled` | true | 是否给 chat agent 提供该工具 |
 | `sharePerm` | full_access | 默认权限角色（view/edit/full_access），模型可每次覆盖 |
 | `workspaceRoot` | "" | **每个对话自动派生独立工作目录** `<workspaceRoot>/<对话key>`（首次对话自动创建，key 已做文件系统安全化）；派生目录参与 session id → 每个对话/用户的**工作目录与记忆双重隔离**。配 `sessionScope: chat-sender` 即"每用户独立目录+独立上下文"。空 = 所有对话共享 `cwd`（上游行为）。`/cd` 仍可覆盖 |
+| `notifyLifecycle` | true | **生命周期通知**：连接中断时向近期活跃的聊天发送"⚠️ 服务连接中断，正在重连"；恢复（含重启后首次连上）发送"✅ 服务已恢复"。每聊天 60s 去抖，活跃聊天清单持久化（重启后仍知道通知谁）。退出 dsh/系统重启前的中断通知为尽力而为（进程退出竞态），恢复通知是可靠的那一半 |
 
 前置：飞书开发者后台为应用开通 `docs:permission.member:create` + 资源 scope（`drive:drive` / `docs:doc` / `sheets:spreadsheet` / `bitable:app` 等）。
 

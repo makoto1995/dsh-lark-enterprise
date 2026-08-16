@@ -78,6 +78,13 @@ export interface Config {
    * zero. Absent is the first session, whose id is unchanged.
    */
   chatEpochs?: Record<string, string>
+  /**
+   * Managed state, not configuration: recently active chat ids stamped with
+   * their last-activity epoch ms, written by the lifecycle notifier so a
+   * restarted process still knows which chats to tell about interruptions
+   * and restores. Not hand-edited.
+   */
+  chatActivity?: Record<string, number>
   /** Provider route override for chat agents; defaults to the host `agentDefaultModel` selection. */
   provider?: string
   /** Model id override for chat agents; defaults to the host `agentDefaultModel` selection. */
@@ -207,6 +214,13 @@ export interface Config {
    * top of it. Empty keeps the upstream shared-default behavior.
    */
   workspaceRoot?: string
+  /**
+   * Lifecycle notices (enterprise fork): when true, every recently active
+   * chat is told when the long connection drops ("service interrupted,
+   * reconnecting") and when it recovers ("service restored"), throttled per
+   * chat. Off silences them entirely.
+   */
+  notifyLifecycle?: boolean
 }
 
 /** Configuration after defaults have been resolved; credentials may still be pending onboarding. */
@@ -241,6 +255,8 @@ export interface ResolvedConfig {
   sharePerm: 'view' | 'edit' | 'full_access'
   shareLarkCliEntry: string
   workspaceRoot: string
+  notifyLifecycle: boolean
+  chatActivity: Record<string, number>
 }
 
 /** Loader-visible configuration schema and defaults. */
@@ -275,6 +291,8 @@ export const Config: z<Config> = z.object({
   sharePerm: z.union(['view', 'edit', 'full_access'] as const).default('full_access'),
   shareLarkCliEntry: z.string(),
   workspaceRoot: z.string(),
+  notifyLifecycle: z.boolean().default(true),
+  chatActivity: z.dict(z.number()).default({}),
 })
 
 /**
@@ -306,5 +324,7 @@ export function resolveConfig(config: Config): ResolvedConfig {
     sharePerm: config.sharePerm ?? 'full_access',
     shareLarkCliEntry: config.shareLarkCliEntry ?? '',
     workspaceRoot: config.workspaceRoot ?? '',
+    notifyLifecycle: config.notifyLifecycle ?? true,
+    chatActivity: config.chatActivity ?? {},
   }
 }

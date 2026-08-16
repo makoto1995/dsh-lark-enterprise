@@ -74,6 +74,7 @@ import { PLAN_TOOL, planReviewQuestion, shadowPlanTool } from './plan.ts'
 import type { HostPlanMode, PlanReviewPorts } from './plan.ts'
 import type { AskedQuestion, QuestionAnswer } from './questions.ts'
 import { shareDocumentTool } from './share.ts'
+import { LifecycleNotifier } from './lifecycle.ts'
 import { ownVersion } from './version.ts'
 import { collectImages } from './images.ts'
 import type { CollectedImages, ImagePort } from './images.ts'
@@ -490,6 +491,16 @@ export function installBridge(
 ): void {
   const bySession = new Map<string, ChatBinding>()
   const pendingApprovals = new Map<string, PendingApproval>()
+  // Enterprise fork: lifecycle notices (interrupted / restored) to every
+  // recently active chat. Audience is settings-persisted (chatActivity), so a
+  // restarted process still knows whom to tell; notices are throttled per chat.
+  const notifier = new LifecycleNotifier({
+    enabled: config.notifyLifecycle,
+    activity: config.chatActivity,
+    persist: async (patch) => persistState(patch),
+    report: notify,
+    port: { send: (chatId, message) => port.send(chatId, message) },
+  })
   /**
    * Tool-call arguments by session, then call id, with the turn that made the
    * call. An approval names the call it decides but not what that call does,
@@ -1053,6 +1064,9 @@ export function installBridge(
 
 
   const handleMessage = async (msg: NormalizedMessage): Promise<void> => {
+    // Enterprise fork: any inbound traffic marks this chat as one to notify
+    // about interruptions and restores.
+    notifier.recordActivity(msg.chatId)
     // Authorization before anything else: a message here starts a
     // shell-capable agent. Refusals stay silent in the chat — answering would
     // turn the bot into an oracle for who is authorized — and name the sender
@@ -1515,12 +1529,17 @@ export function installBridge(
     watchdog.onReconnecting()
     notify('lark-channel: connection lost, reconnecting — events arriving now are not replayed')
     ctx.logger.warn('connection lost, reconnecting')
+    // Enterprise fork: tell every active chat the service is interrupted.
+    notifier.notifyInterrupted()
   }), 'lark:on(reconnecting)')
 
   ctx.effect(() => port.on('reconnected', () => {
     watchdog.onReconnected()
     notify('lark-channel: connection restored')
     ctx.logger.info('connection restored')
+    // Enterprise fork: tell every active chat the service is back (this also
+    // fires right after a process restart, covering the "restart" case).
+    notifier.notifyRestored()
   }), 'lark:on(reconnected)')
 
   // Outbound: the owned chat's renderer decides what reaches the chat. The
@@ -1590,6 +1609,11 @@ export function installBridge(
   // it does the disposing — and it leaves an adopted one running for its owner.
   ctx.effect(() => () => {
     unwound = true
+    // Enterprise fork, best-effort: tell active chats the service is going
+    // down (system restart / dsh exit). Fire-and-forget — the process is about
+    // to exit, so the HTTP send may or may not land; the reliable half of the
+    // pair is the "service restored" notice after the next connect.
+    notifier.notifyInterrupted()
     for (const id of [...pendingApprovals.keys()]) settleApproval(id, 'cancelled')
     pendingApprovals.clear()
     for (const sessionId of [...bySession.keys()]) questions.cancelSession(sessionId)
